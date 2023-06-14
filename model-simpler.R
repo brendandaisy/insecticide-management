@@ -1,8 +1,8 @@
 library(tidyverse)
 
 # The model-----------------------------------------------------------------------
-run_model <- function(A, num_gen, fun=run_generation) {
-    accumulate(1:num_gen, ~fun(.x), .init=A)
+run_model <- function(A, num_gen, trans_mats=default_trans_mats(), fun=run_generation) {
+    accumulate(1:num_gen, ~fun(.x, trans_mats), .init=A)
 }
 
 run_generation <- function(A) {
