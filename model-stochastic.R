@@ -1,24 +1,5 @@
 library(tidyverse)
 
-run_gen_stochastic <- function(A) {
-    nh <- nrow(A)
-    Em <- Ef <- matrix(0, nh, nh) 
-    for (i in 1:nh) {
-        for (j in 1:nh) {
-            Em[i, j] <- rbinom(1, A[i, j], 0.5)
-            Ef[i, j] <- rbinom(1, A[i, j] - Em[i, j], R[i, j])
-        }
-    }
-    Gf <- map_dbl(1:nh, ~sum((W[.x,] * Ef[.x,]) / ifelse(1:nh == .x, 1, 2)))
-    Gm <- map_dbl(1:nh, ~sum((W[.x,] * Em[.x,]) / ifelse(1:nh == .x, 1, 2)))
-    Gf <- Gf / sum(Gf)
-    Gm <- Gm / sum(Gm)
-    L <- c(M * Gf %*% t(Gm))
-    L <- L / sum(L)
-    Avec <- rmultinom(1, num_adults, L)
-    return(matrix(Avec, nh, nh))
-}
-
 num_adults <- 600
 s <- 0.4
 h <- 0.05
