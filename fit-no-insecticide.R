@@ -3,10 +3,7 @@ library(tidyverse)
 source("model-helpers.R")
 source("base-model.R")
 
-dat <- read_csv("Acp_site.csv") |> 
-    rename(site=Site, t=Generation, rep=Rep)
-
-colnames(dat)[5:13] <- c("VFVF", "VFVC", "VCVC", "IFVF", "VFIC", "VCIC", "IFIF", "IFIC", "ICIC")
+vm <- read_csv("data-proc/vera-maloof.csv")
 
 dat_summ <- dat |> 
     pivot_longer(VFVF:ICIC, names_to="genotype") |> 

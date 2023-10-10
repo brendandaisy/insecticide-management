@@ -2,7 +2,7 @@ library(tidyverse)
 
 geno2index <- list( # upper triangle of A
     "VFVF"=c(1, 1), "VFVC"=c(1, 2), "VCVC"=c(2, 2), 
-    "VFIC"=c(1, 3), "VCIC"=c(2, 3), "ICIC"=c(3, 3))
+    "VFIC"=c(1, 3), "VCIC"=c(2, 3), "ICIC"=c(3, 3)
 )
 
 index2geno <- expand_grid(i=1:nh, j=1:nh) |> 

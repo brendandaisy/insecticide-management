@@ -19,6 +19,8 @@ vm_proc <- vm_raw |>
         IF=VFIF+2*IFIF+IFIC
     )
 
+write_csv(vm_proc, "data-proc/vera-maloof.csv")
+
 vm_proc |> 
     pivot_longer(VFVF:ICIC, names_to="genotype", values_to="count") |> 
     ggplot(aes(generation, count, col=genotype, group=genotype)) +

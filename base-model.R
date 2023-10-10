@@ -18,9 +18,8 @@ run_gen <- function(A, R, W, M) {
     Gf <- Gf / sum(Gf)
     Gm <- Gm / sum(Gm)
     L <- M * Gf %*% t(Gm)
-    L <- L / sum(L)
     colnames(L) <- rownames(L) <- haplotypes
-    return(num_adults * L)
+    return(L)
 }
 
 run_gen_stochastic <- function(A, R, W, M) {
