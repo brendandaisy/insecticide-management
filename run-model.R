@@ -3,35 +3,36 @@ library(tidyverse)
 # Set global values used throughout-----------------------------------------------
 haplotypes <- c("VF", "VC", "IC")
 nh <- length(haplotypes)
-num_adults <- 600
 
 # The model-----------------------------------------------------------------------
-run_model <- function(A, num_gen, trans_mats=default_trans_mats(), gfun=run_gen) {
-    accumulate(1:num_gen, ~gfun(.x, trans_mats$R, trans_mats$W, trans_mats$M), .init=A)
+run_model <- function(A1, R, W, M, num_gen, num_adults, gfun=run_gen) {
+    C <- matrix(0.5, 3, 3)
+    diag(C) <- 1
+    accumulate(1:(num_gen-1), ~gfun(.x, R, W, M, C, num_adults), .init=A1)
 }
 
-run_gen <- function(A, R, W, M) {
+# num_adults unused
+run_gen <- function(A, R, W, M, C, num_adults) {
     Ef <- 0.5 * R * A
     Em <- 0.5 * A
-    Gf <- map_dbl(1:nh, ~sum((W[.x,] * Ef[.x,]) / ifelse(1:nh == .x, 1, 2)))
-    Gm <- map_dbl(1:nh, ~sum((W[.x,] * Em[.x,]) / ifelse(1:nh == .x, 1, 2)))
+    Gf <- colSums(C * W * Ef)
+    Gm <- colSums(C * W * Em)
     Gf <- Gf / sum(Gf)
     Gm <- Gm / sum(Gm)
     L <- M * Gf %*% t(Gm)
-    colnames(L) <- rownames(L) <- haplotypes
-    return(L)
+    return(L / sum(L) * num_adults)
 }
 
-run_gen_stochastic <- function(A, R, W, M) {
-    Em <- matrix(rbinom(1, A, 0.5), nh, nh)
-    Ef <- matrix(rbinom(1, A - Em, R), nh, nh)
-    Gf <- map_dbl(1:nh, ~sum((W[.x,] * Ef[.x,]) / ifelse(1:nh == .x, 1, 2)))
-    Gm <- map_dbl(1:nh, ~sum((W[.x,] * Em[.x,]) / ifelse(1:nh == .x, 1, 2)))
+run_gen_stochastic <- function(A, R, W, M, C, num_adults) {
+    Ef <- 0.5 * R * A # VM maintained exactly 50% for each sex
+    Em <- 0.5 * A
+    Gf <- colSums(C * W * Ef)
+    Gm <- colSums(C * W * Em)
     Gf <- Gf / sum(Gf)
     Gm <- Gm / sum(Gm)
     L <- c(M * Gf %*% t(Gm))
-    L <- L / sum(L)
-    return(matrix(rmultinom(1, num_adults, L), nh, nh))
+    A <- matrix(rmultinom(1, num_adults, L), 3, 3)
+    return(A)
 }
 
 # R <- matrix(0.4495, nh, nh) # with these params, small adjustments to this number will change which of the 3 dominates

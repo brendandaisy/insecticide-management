@@ -1,18 +1,30 @@
 library(tidyverse)
 
+#  some globals-------------------------------------------------------------------
+haplotypes <- fct_inorder(c("VF", "VC", "IC"))
+genotypes <- fct_inorder(c("VFVF", "VFVC", "VCVC", "VFIC", "VCIC", "ICIC"))
+nh <- length(haplotypes)
+
 geno2index <- list( # upper triangle of A
     "VFVF"=c(1, 1), "VFVC"=c(1, 2), "VCVC"=c(2, 2), 
     "VFIC"=c(1, 3), "VCIC"=c(2, 3), "ICIC"=c(3, 3)
 )
 
 index2geno <- expand_grid(i=1:nh, j=1:nh) |> 
-    mutate(genotype=ifelse(i >= j, str_c(haplotypes[j], haplotypes[i]), str_c(haplotypes[i], haplotypes[j]))) |> 
+    mutate(
+        genotype=factor(
+            ifelse(i >= j, str_c(haplotypes[j], haplotypes[i]), str_c(haplotypes[i], haplotypes[j])),
+            levels=levels(genotypes)
+        )
+    ) |> 
+    arrange(genotype) |> 
     group_by(genotype)
 
-init_adults <- function(dat) {
+#  functions for processing Vera-Maloof data--------------------------------------
+prop_adults_rep <- function(rep_df, key) {
     A <- matrix(0, nh, nh)
-    iwalk(geno2index, \(i, g) {
-        genos <- filter(dat, genotype == g, t == 1)$prop[1]
+    imap(geno2index, \(i, g) {
+        genos <- filter(rep_df, genotype == g)$count[1] # get the counts for this genotype
         if (i[1] == i[2]) {
             A[i[1], i[2]] <<- genos
         } else {
@@ -20,45 +32,48 @@ init_adults <- function(dat) {
             A[i[2], i[1]] <<- genos / 2
         }
     })
-    return(num_adults * A)
+    n <- sum(A)
+    return(tibble_row(A=list(A / n), N=n))
 }
 
+prop_init_adults <- function(vm_long) {
+    vm_long |> 
+        filter(generation == 1) |> 
+        group_by(site, rep, generation) |> 
+        group_modify(prop_adults_rep) |> 
+        ungroup()
+}
+
+# Model helper functions----------------------------------------------------------
+
 # a simple form of fitness depending only on a "selection coefficient" s and "dominance coef." h
-fitness_weights <- function(s, h, type=1:2) {
-    x <- if (type == 1) 1 else if (type == 2) h
-    H <- matrix(c(
-        0, h, h,
-        h, x, x,
-        h, x, 1
+fitness_weights <- function(h, s1, s2) {
+    1 - matrix(c(
+        0, h*s1, h*s2,
+        h*s1, s1, h*s2,
+        h*s2, h*s2, s2
     ), nrow=3, byrow=TRUE)
-    return(1 - s*H)
 }
 
 # Model summary functions----------------------------------------------------------
-model_summary <- function(result, fun=prop_haplotype) {
-    imap_dfr(result, ~mutate(fun(.x), t=.y))
+model_summary <- function(result, fun) {
+    imap_dfr(result, ~mutate(fun(.x), generation=.y))
 }
 
-prop_pairs <- function(A) {
-    pairs <- expand_grid(h1=haplotypes, h2=haplotypes) |> mutate(g=str_c(h1, "_", h2)) |> pull(g)
-    props <- c(t(A)) / num_adults
-    names(props) <- pairs
-    enframe(props, "pair", "prop")
-}
+# prop_pairs <- function(A) {
+#     pairs <- expand_grid(h1=haplotypes, h2=haplotypes) |> mutate(g=str_c(h1, "_", h2)) |> pull(g)
+#     props <- c(t(A)) / num_adults
+#     names(props) <- pairs
+#     enframe(props, "pair", "prop")
+# }
 
-prop_haplotype <- function(A) {
-    props <- map_dbl(1:nrow(A), ~sum(A[.x,] + A[,.x]) / (2*num_adults))
+mat2haplotype <- function(A) {
+    props <- map_dbl(1:nrow(A), ~sum(A[.x,] + A[,.x]) / 2)
     names(props) <- haplotypes
-    enframe(props, "haplotype", "prop")
+    enframe(props, "haplotype", "value")
 }
 
-prop_genotype <- function(A) {
+mat2genotype <- function(A) {
     index2geno |> 
-        summarize(prop=sum(map2_dbl(i, j, \(i, j) A[i, j])) / num_adults, .groups="drop")
-    # expand_grid(i=1:nrow(A), j=1:nrow(A)) |> 
-    #     filter(i >= j) |> 
-    #     mutate(
-    #         genotype=str_c(haplotypes[j], haplotypes[i]),
-    #         prop=map2_dbl(i, j, \(i, j) if (i == j) A[i, j] else A[i, j] + A[j, i]) / num_adults
-    #     )
+        summarize(value=sum(map2_dbl(i, j, \(i, j) A[i, j])), .groups="drop")
 }
