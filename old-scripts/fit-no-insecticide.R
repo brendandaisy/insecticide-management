@@ -3,7 +3,7 @@ library(MASS, exclude=c("select"))
 library(tikzDevice)
 
 source("model-helpers.R")
-source("base-model.R")
+source("run-model.R")
 
 check_bounds <- function(params) {
     all(c(0, 0, 0, 0) <= params & params <= c(0.1, 1, 1, 1))

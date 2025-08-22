@@ -13,24 +13,24 @@ s2 <- 0.8 # s2 -> 1 more penalty for IC haplotype
 W <- fitness_weights(h, s1, s2) # fitness matrix
 
 R <- matrix(1, 3, 3) # resistance matrix
-R[3, 3] <- 0.7 # for now, assume only homozygotes in IC enjoy any immunity from insecticides
+R[3, 3] <- 1 # for now, assume only homozygotes in IC enjoy any immunity from insecticides
 
 M <- 1 # maturation matrix (we've been assuming this constant throughout and probably won't use it)
 
 #  initial condition--------------------------------------------------------------
-num_gen <- 10 # run for 10 generations of mosquitoes
+num_gen <- 20 # number of generations to run experiment
 num_adults <- 100
 # number of adults of each genotype - contributions: female (rows) and males (cols)
 A <- matrix(0, 3, 3)
 colnames(A) <- rownames(A) <- haplotypes
-diag(A) <- num_adults * c(0.1, 0.3, 0.7) # assume there are more resistant mosquitoes, and only homozygotes initially
+diag(A) <- num_adults * c(0.1, 0.3, 0.6) # assume there are more resistant mosquitoes, and only homozygotes initially
 
-# run the deterministic and stochastic versions for 10 generations----------------
+# run the deterministic and stochastic versions for `num_gen` generations----------------
 
-res_det <- run_model(A, R, W, M, 10, num_adults=num_adults, gfun=run_gen)
+res_det <- run_model(A, R, W, M, num_gen, num_adults=num_adults, gfun=run_gen)
 
 res_sto <- map_dfr(1:500, \(rep) { # run for 500 replications
-    r <- run_model(A, R, W, M, 10, gfun=run_gen_stochastic, num_adults=num_adults)
+    r <- run_model(A, R, W, M, num_gen, gfun=run_gen_stochastic, num_adults=num_adults)
     tibble_row(res=list(r), rep=rep)
 })
 

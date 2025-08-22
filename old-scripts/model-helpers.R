@@ -68,7 +68,10 @@ model_summary <- function(result, fun) {
 # }
 
 mat2haplotype <- function(A) {
-    props <- map_dbl(1:nrow(A), ~sum(A[.x,] + A[,.x]) / 2)
+    # TODO: 4/2 not really sure what the / 2 was doing? Was more like proportion out of all haplotypes...
+    # current implementation is the proportion of individuals with haplotype on their genome
+    # props <- map_dbl(1:nrow(A), ~sum(A[.x,] + A[,.x]) / 2)
+    props <- map_dbl(1:nrow(A), \(i) A[i, i] + sum(A[i, -i] + A[-i, i])) / sum(A)
     names(props) <- haplotypes
     enframe(props, "haplotype", "value")
 }
