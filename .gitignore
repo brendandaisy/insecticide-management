@@ -2,3 +2,14 @@
 *.RData
 *.Rhistory
 .Rproj.user
+.DS_Store
+
+*.bib
+*.docx
+*.key
+*.h5
+
+.vscode
+data-proc
+data-raw
+figs
