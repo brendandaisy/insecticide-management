@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.4
+# v0.20.16
 
 using Markdown
 using InteractiveUtils
@@ -261,7 +261,17 @@ end
 w2 .* r2
   ╠═╡ =#
 
+# ╔═╡ 828b57a5-f875-4734-9407-8164503c70cc
+#=╠═╡
+begin
+	fig, ax = series(stack(res2)[:,1:100], labels=𝔾, color=:darktest, linewidth=2.5)
+	fig[1, 2] = Legend(fig, ax, "genotypes", framevisible=false)
+	fig
+end
+  ╠═╡ =#
+
 # ╔═╡ 3093f704-7705-45bc-ae5c-dc210c1df19b
+#=╠═╡
 begin
 	fig = Figure()
 	ax = Axis(fig[1, 1])
@@ -293,14 +303,6 @@ begin
 	# xlims!(ax2, -0.2, 1.2)
 	# ylims!(ax2, -0.3, 1.1)
 	# hidedecorations!(ax2)
-	fig
-end
-
-# ╔═╡ 828b57a5-f875-4734-9407-8164503c70cc
-#=╠═╡
-begin
-	fig, ax = series(stack(res2)[:,1:100], labels=𝔾, color=:darktest, linewidth=2.5)
-	fig[1, 2] = Legend(fig, ax, "genotypes", framevisible=false)
 	fig
 end
   ╠═╡ =#
