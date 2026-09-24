@@ -788,31 +788,31 @@ end
 """
 Simulate a complete trajectory.
 
-Returns a named tuple with:
+Returns a trajectory array which is:
 
     trajectory
-        A (generations + 1) × 8 matrix.
-        Row 1 is generation 0.
-        Row g+1 is generation g.
-
-    mean_fitness
-        A vector containing mean fitness for each transition.
+        An 8 × generations matrix.
+        Column 1 is generation 1.
+        Column g is generation g.
 """
 function simulate(
     model::ThreeLocusModel,
-    x0,
+    x1,
     generations::Integer;
     checks::Bool = true,
     atol::Real = 1e-12
 )
-    generations >= 0 ||
+    generations >= 1 ||
         throw(ArgumentError(
-            "The number of generations cannot be negative."
+            "The number of generations must be positive."
         ))
+    if generations == 1
+        return x1
+    end
 
     # Collect the initial input before determining the common
     # numerical type.
-    x_raw = collect(x0)
+    x_raw = collect(x1)
 
     # Find a common concrete numerical type for the initial
     # distribution and the model tensors.
@@ -837,22 +837,18 @@ function simulate(
     # Allocate storage for the complete frequency trajectory.
     trajectory = zeros(
         T,
-        generations + 1,
-        N_HAPLOTYPES
+        N_HAPLOTYPES,
+        generations
     )
 
-    # Store generation 0.
-    trajectory[1, :] .= x_current
-
-    # Mean fitness is defined for each transition t -> t+1.
-    mean_fitness = zeros(T, generations)
+    # Store generation 1.
+    trajectory[:, 1] .= x_current
 
     # Reusable next-generation vector.
     x_next = similar(x_current)
 
-    for generation in 1:generations
-
-        mean_fitness[generation] = step!(
+    for generation in 2:generations
+        step!(
             x_next,
             x_current,
             model;
@@ -861,17 +857,14 @@ function simulate(
         )
 
         # Store the newly calculated distribution.
-        trajectory[generation + 1, :] .= x_next
+        trajectory[:, generation] .= x_next
 
         # Exchange the roles of the two vectors without allocating
         # new vectors.
         x_current, x_next = x_next, x_current
     end
 
-    return (
-        trajectory = trajectory,
-        mean_fitness = mean_fitness
-    )
+    return trajectory
 end
 
 
@@ -882,19 +875,22 @@ Use this function when only the final distribution is needed.
 """
 function simulate_final(
     model::ThreeLocusModel,
-    x0,
+    x1,
     generations::Integer;
     checks::Bool = true,
     atol::Real = 1e-12
 )
-    generations >= 0 ||
+    generations >= 1 ||
         throw(ArgumentError(
-            "The number of generations cannot be negative."
+            "The number of generations must be positive."
         ))
+    if generations == 1
+        return x1
+    end
 
     # Collect the initial input before determining the common
     # numerical type.
-    x_raw = collect(x0)
+    x_raw = collect(x1)
 
     # Find a common concrete numerical type for the initial
     # distribution and the model tensors.
@@ -914,7 +910,7 @@ function simulate_final(
 
     x_next = similar(x_current)
 
-    for _ in 1:generations
+    for _ in 2:generations
         step!(
             x_next,
             x_current,

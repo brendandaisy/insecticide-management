@@ -52,7 +52,7 @@ function plot_frequency_trajectory(
     #
     # Therefore, a trajectory with n rows corresponds to
     # generations 0 through n - 1.
-    generation_values = 0:(size(trajectory, 1) - 1)
+    generation_values = 0:(size(trajectory, 2) - 1)
 
     # Construct an initially empty plot.
     frequency_plot = plot(
@@ -71,7 +71,7 @@ function plot_frequency_trajectory(
         plot!(
             frequency_plot,
             generation_values,
-            trajectory[:, haplotype_index],
+            trajectory[haplotype_index, :],
             label = HAPLOTYPE_NAMES[haplotype_index],
             linewidth = 2
         )
@@ -237,7 +237,7 @@ function run_experiment(;
 
     println()
     println("Final haplotype distribution after $generations generations:")
-    print_distribution(result.trajectory[end, :])
+    print_distribution(result.trajectory[:, end])
 
     println()
     @printf(
@@ -377,7 +377,7 @@ trajectory = experiment_1.result.trajectory
 mean_fitness = experiment_1.result.mean_fitness
 
 # Final haplotype-frequency distribution:
-final_distribution = trajectory[end, :]
+final_distribution = trajectory[:, end]
 
 # Constructed fitness matrix:
 W = experiment_1.W
@@ -421,7 +421,7 @@ function plot_haplotype_frequencies(
         plot!(
             haplotype_plot,
             generations,
-            trajectory[:, i],
+            trajectory[i, :],
             label = HAPLOTYPE_NAMES[i],
             linewidth = 2
         )
