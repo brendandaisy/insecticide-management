@@ -6,21 +6,7 @@ using AlgebraOfGraphics
 include("../src/popgen-three-locus.jl")
 include("../src/popgen-turing-vm.jl")
 
-
-
-# ============================================================
-# Plotting deterministic model trajectories of different
-# fitness effects at L2 and L3
-# ============================================================
-# - "is there a scenario where double het VI-FC can increase?"
-# where the demoted pair doesn
-# - yes, but (requires?) a scenario where either VF and IC are the best, or 
-# VC and IF are the best. Since we expect both IC and IF to be unfit,
-# we should expect VI-FC to decrease in the data
-# - well, VI-FC actually is overall stable, but this could be from short generation time or 
-# from IC being recessive (for example, VI-CC also appear stable)
-
-function deterministic_trajectory(
+function two_locus_trajectory(
     selection,
     dominance,
     x0;
@@ -54,9 +40,9 @@ function deterministic_trajectory(
         proportion = Float64[]
     )
 
-    for generation in 0:generations
+    for generation in 1:generations
         probabilities = vm_two_locus_genotype_probs(
-            simulation.trajectory[:, generation + 1]
+            simulation[:, generation]
         )
         for genotype_index in eachindex(L2_L3_GENOTYPES)
             push!(
@@ -73,6 +59,70 @@ function deterministic_trajectory(
 
     return records, W
 end
+
+# ============================================================
+# Exploring the effect of the recombination parameters
+# ============================================================
+# outcomes are certainly similar, but not definitively exchangeable. Proceeding
+# to a proper practical identifiability analysis
+
+selection_neutral = fill(0., 8)
+dominance_neutral = fill(1., 8)
+Wneutral = build_fitness_matrix(selection_neutral, dominance_neutral)
+
+selection_guess = [0, 0.05, 0.95, 0.8, 0.2, 0.15, 0.99, 0.85]
+dominance_guess = [0, 0.5, 0.95, 0.1, 0.5, 0.5, 0.95, 0.3]
+Wguess = build_fitness_matrix(selection_guess, dominance_guess)
+
+xinit = [1, 1, 1, 3, 1, 2, 1, 10]
+xinit = xinit ./ sum(xinit)
+
+scenario1 = two_locus_trajectory(
+    selection_neutral, dominance_neutral, xinit;
+    rAB=0.1, rBC=0.9,
+    scenario="W neutral, rAB low, rBC high"
+)
+
+scenario2 = two_locus_trajectory(
+    selection_neutral, dominance_neutral, xinit;
+    rAB=0.9, rBC=0.1,
+    scenario="W neutral, rAB high, rBC low"
+)
+
+scenario3 = two_locus_trajectory(
+    selection_guess, dominance_guess, xinit;
+    rAB=0.1, rBC=0.9,
+    scenario="W guess, rAB low, rBC high"
+)
+
+scenario4 = two_locus_trajectory(
+    selection_guess, dominance_guess, xinit;
+    rAB=0.9, rBC=0.1,
+    scenario="W guess, rAB high, rBC low"
+)
+
+trajectories = reduce(
+    vcat,
+    first.([scenario1, scenario2, scenario3, scenario4])
+)
+
+spec = data(trajectories) *
+    mapping(:generation, :proportion; color=:genotype, layout=:scenario) *
+    visual(ScatterLines)
+
+draw(spec, scales(Color=(;palette=:tab10)))
+
+# ============================================================
+# Plotting deterministic model trajectories of different
+# fitness effects at L2 and L3
+# ============================================================
+# - "is there a scenario where double het VI-FC can increase?"
+# where the demoted pair doesn
+# - yes, but (requires?) a scenario where either VF and IC are the best, or 
+# VC and IF are the best. Since we expect both IC and IF to be unfit,
+# we should expect VI-FC to decrease in the data
+# - well, VI-FC actually is overall stable, but this could be from short generation time or 
+# from IC being recessive (for example, VI-CC also appear stable)
 
 # Haplotype order: VVF, VVC, VIF, VIC, LVF, LVC, LIF, LIC.
 # A uniform initial distribution makes the initial two-locus genotype
@@ -116,8 +166,6 @@ scenarios = [
         dominance = [0.0, 0.0, 0.1, 0.5, 0.0, 0.0, 0.1, 0.5]
     )
 ]
-
-build_fitness_matrix(scenarios[3].selection, scenarios[3].dominance; checks=false)
 
 trajectory_tables = DataFrame[]
 fitness_matrices = Dict{String, Matrix{Float64}}()

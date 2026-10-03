@@ -105,12 +105,7 @@ function build_fitness_matrix(
     end
 
     if checks
-        check_constructed_fitness_matrix(
-            W,
-            s_typed,
-            h_typed;
-            atol = atol
-        )
+        check_fitness_matrix(W; atol)
     end
 
     return W

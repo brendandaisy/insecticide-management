@@ -13,7 +13,7 @@ const L2_L3_GENOTYPES = [
     "II-CC"
 ]
 
-const HAPLOTYPES_1016_1534 = ["VF", "VC", "IF", "IC"]
+const L2_L3_HAPLOTYPES = ["VF", "VC", "IF", "IC"]
 
 """
 Convert nine two-locus diploid genotype counts into expected counts
@@ -187,6 +187,8 @@ each site/replicate has its own initial three-locus haplotype distribution.
     # n_genotypes, n_generation_columns, n_groups_in_counts = size(counts)
     # n_groups_in_counts == n_groups ||
     #     throw(DimensionMismatch("counts has an unexpected group dimension."))
+    error("Remember to fix fitness parameters at VVF to zero!")
+    error("If you end up not using xIF, these should be removed from likelihood")
 
     rAB ~ Beta(1, 3)
     rBC ~ Beta(1, 3)
@@ -249,14 +251,10 @@ each site/replicate has its own initial three-locus haplotype distribution.
 end
 
 """
-Turing model for the two-locus VM observations.
+Turing model for the two-locus VM observations and a single group.
 
 The latent population is three-locus, while observations contain only
 loci 1016 and 1534. 
-
-If multiple sites are given, fitness and recombination parameters are shared by
-replicates within each site, while recombination parameters are globally shared across sites; 
-each site/replicate has its own initial three-locus haplotype distribution.
 """
 @model function vm_two_locus_model(
     counts,
@@ -264,101 +262,52 @@ each site/replicate has its own initial three-locus haplotype distribution.
     generations,
     ::Type{T}=Float64
 ) where {T}
-    # n_genotypes, n_generation_columns, n_groups_in_counts = size(counts)
-    # n_groups_in_counts == n_groups ||
-    #     throw(DimensionMismatch("counts has an unexpected group dimension."))
 
     rAB ~ Beta(1, 3)
     rBC ~ Beta(1, 3)
     delta ~ truncated(Normal(0, 3), 0, Inf)
 
-    selection ~ filldist(Beta(1, 1), N_HAPLOTYPES-1)
+    # TODO .~ necessary to fix specific fitness params in array, but consider
+    # something more efficient if this becomes the norm (e.g. setting xIF fitness)
+    selection_raw = Vector{T}(undef, N_HAPLOTYPES-1)
+    selection_raw .~ Beta(1, 1)
+    selection = copy(selection_raw)
     pushfirst!(selection, 0)
 
-    dominance ~ filldist(Beta(1, 1), N_HAPLOTYPES-1)
-    dominance = 2 * dominance_raw[site, haplotype] - 1
+    dominance_raw = Vector{T}(undef, N_HAPLOTYPES-1)
+    dominance_raw .~ Beta(1, 1)
+    dominance = 2 .* dominance_raw .- 1
     pushfirst!(dominance, 0)
 
-    for haplotype in 1:N_HAPLOTYPES
-        selection_phi[haplotype] ~ Beta(1, 1)
-        selection_lambda[haplotype] ~ Pareto(1, 1.5)
+    initial_haplotype_counts = haplotype_counts_to_three_locus_counts(
+        counts[:, 1]
+    ) .+ delta
+    # initial_haplotypes ~ Dirichlet(
+    #     T.(initial_haplotype_counts) .+ delta
+    # )
 
-        dominance_phi[haplotype] ~ Beta(1, 1)
-        dominance_lambda[haplotype] ~ Pareto(1, 1.5)
-    end
+    popgen_model = build_model(
+        build_fitness_matrix(selection, dominance; checks=false);
+        rAB = rAB,
+        rBC = rBC,
+        checks = false
+    )
 
-    for site in 1:n_sites
-        for haplotype in 1:N_HAPLOTYPES
-            selection[site, haplotype] ~ Beta(
-                selection_lambda[haplotype] * selection_phi[haplotype],
-                selection_lambda[haplotype] * (
-                    1 - selection_phi[haplotype]
-                )
-            )
+    x = initial_haplotype_counts ./ sum(initial_haplotype_counts)
+    x_next = similar(x)
+    probabilities = similar(x, length(L2_L3_GENOTYPES))
 
-            dominance_raw[site, haplotype] ~ Beta(
-                dominance_lambda[haplotype] * dominance_phi[haplotype],
-                dominance_lambda[haplotype] * (
-                    1 - dominance_phi[haplotype]
-                )
-            )
+    # TODO removing the xIF params is probably biasing recomb. params slightly,
+    # should refactor depending on how you proceed
+    for t in 1:generations
+        vm_two_locus_genotype_probs!(probabilities, x)
 
-            
-        end
-    end
-
-    fitness_params ~ to_submodel(vm_fitness_priors(n_sites), false)
-    selection = fitness_params.selection
-    dominance = fitness_params.dominance
-    initial_haplotypes = Vector{Vector{T}}(undef, n_groups)
-    for group in 1:n_groups
-        initial_haplotype_counts = haplotype_counts_to_three_locus_counts(
-            counts[:, 1, group]
+        counts[:, t] ~ Multinomial(
+            sample_sizes[t],
+            probabilities
         )
-        initial_haplotypes[group] ~ Dirichlet(
-            T.(initial_haplotype_counts) .+ delta
-        )
+
+        step!(x_next, x, popgen_model; checks=false)
+        x, x_next = x_next, x
     end
-
-    site_models = [
-        build_model(
-            build_fitness_matrix(
-                selection[site, :],
-                dominance[site, :];
-                checks = false
-            );
-            rAB = rAB,
-            rBC = rBC,
-            checks = false
-        )
-        for site in 1:n_sites
-    ]
-
-    predicted = similar(counts, T)
-
-    for group in 1:n_groups
-        site = group_site[group]
-        popgen_model = site_models[site]
-
-        x = copy(initial_haplotypes[group])
-        x_next = similar(x)
-        probabilities = similar(x, length(L2_L3_GENOTYPES))
-
-        for generation in 1:n_generations[group]
-            vm_two_locus_genotype_probs!(probabilities, x)
-            predicted[:, generation, group] .= probabilities
-
-            counts[:, generation, group] ~ Multinomial(
-                sample_sizes[generation, group],
-                probabilities
-            )
-
-            if generation < n_generations[group]
-                step!(x_next, x, popgen_model; checks = false)
-                x, x_next = x_next, x
-            end
-        end
-    end
-
-    return predicted
 end
