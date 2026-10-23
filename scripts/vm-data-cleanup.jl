@@ -50,13 +50,12 @@ draw(spec)
 # Input / output
 # ============================================================
 
-input_file = "data-raw/2026-08-26_F1_F8_genotypes.xlsx"
+input_file = "data-raw/2026-09-23_F1_F8_genotypes.xlsx"
 input_cols = ["mosquito_id", "Dz.1", "Dz.8", "Tap.1", "Tap.8", "Mer3.1", "Mer3.8", "Mer2.1", "Mer2.8", "Acp.1", "Acp.8", "Ac.1", "Ac.8", "Mer1.1", "Mer1.8", "Co.1", "Co.8"]
 
 # Sheets/loci, in the order they should appear in the
 # combined genotype
 loci = ["410", "1016", "1534"]
-
 
 # ============================================================
 # Genotype recoding
@@ -335,10 +334,10 @@ spec = data(result) *
         ) *
         visual(ScatterLines)
 
-draw(spec, scales(Color=(;palette=:tab20)))
+draw(spec, scales(Color=(;palette=:tab20)); figure=(;size=(900, 500)))
 
 # ============================================================
 # Write CSV
 # ============================================================
 
-CSV.write("data-proc/vm-geno-counts-new.csv", result)
+CSV.write("data-proc/vm-geno-counts-F1-F8.csv", result)

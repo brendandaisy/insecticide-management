@@ -40,6 +40,24 @@ const HAPLOTYPE_BITS = (
 )
 
 # ============================================================
+# TWO-LOCUS HAPLOTYPE INFORMATION FOR 1016 AND 1534 LOCI
+# ============================================================
+
+const L2_L3_GENOTYPES = [
+    "VV-FF",
+    "VV-FC",
+    "VV-CC",
+    "VI-FF",
+    "VI-FC",
+    "VI-CC",
+    "II-FF",
+    "II-FC",
+    "II-CC"
+]
+
+const L2_L3_HAPLOTYPES = ["VF", "VC", "IF", "IC"]
+
+# ============================================================
 # FITNESS MATRIX PARAMETERIZATIONS
 # ============================================================
 

@@ -1,54 +1,6 @@
 using Distributions
 using Turing
 
-const L2_L3_GENOTYPES = [
-    "VV-FF",
-    "VV-FC",
-    "VV-CC",
-    "VI-FF",
-    "VI-FC",
-    "VI-CC",
-    "II-FF",
-    "II-FC",
-    "II-CC"
-]
-
-const L2_L3_HAPLOTYPES = ["VF", "VC", "IF", "IC"]
-
-"""
-Convert nine two-locus diploid genotype counts into expected counts
-of the four 1016/1534 haplotypes: VF, VC, IF, and IC.
-
-The phase of VI-FC is unobserved. Its count is split equally between
-the VF/IC and VC/IF phases.
-"""
-function genotype_counts_to_haplotype_counts(counts)
-    length(counts) == length(L2_L3_GENOTYPES) ||
-        throw(DimensionMismatch("counts must have length 9."))
-
-    VV_FF, VV_FC, VV_CC,
-    VI_FF, VI_FC, VI_CC,
-    II_FF, II_FC, II_CC = counts
-
-    return [
-        2 * VV_FF + VV_FC + VI_FF + 0.5 * VI_FC,
-        2 * VV_CC + VV_FC + VI_CC + 0.5 * VI_FC,
-        2 * II_FF + VI_FF + II_FC + 0.5 * VI_FC,
-        2 * II_CC + VI_CC + II_FC + 0.5 * VI_FC
-    ]
-end
-
-"""
-Construct eight three-locus pseudo-counts from four two-locus counts.
-
-The 410 locus is unobserved, so each 1016/1534 haplotype is split
-equally across the V and L backgrounds.
-"""
-function haplotype_counts_to_three_locus_counts(counts)
-    two_locus_counts = genotype_counts_to_haplotype_counts(counts)
-    return vcat(two_locus_counts ./ 2, two_locus_counts ./ 2)
-end
-
 @model function vm_fitness_priors(
     n_sites,
     ::Type{T}=Float64
